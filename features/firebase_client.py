@@ -1,17 +1,16 @@
 import os
 import json
 import firebase_admin
-from firebase_admin import credentials, db
+from firebase_admin import credentials, db, get_app
 from dotenv import load_dotenv
 
 load_dotenv()
 
-_app = None
-
 def init_firebase():
-    global _app
-    if _app:
-        return _app
+    try:
+        return get_app()
+    except ValueError:
+        pass
 
     db_url = os.getenv("FIREBASE_DB_URL")
     sa_json = os.getenv("FIREBASE_SERVICE_ACCOUNT_JSON")
@@ -28,10 +27,7 @@ def init_firebase():
 
     cred = credentials.Certificate(sa_dict)
 
-    _app = firebase_admin.initialize_app(cred, {
-        "databaseURL": db_url
-    })
-    return _app
+    return firebase_admin.initialize_app(cred, {"databaseURL": db_url})
 
 def get_ref(path: str):
     init_firebase()
