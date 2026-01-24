@@ -41,29 +41,24 @@ if __name__ == "__main__":
         async def setup_hook(self):
             await self.load_extension("features.voice_intro")
 
-
     bot = Bot(command_prefix="!", intents=intents)
 
     # all my commands
     basic_commands.setup(bot)
     stacks.setup(bot)
 
-
     @bot.event
     async def on_ready():
         await events.on_ready(bot)
-
 
     @bot.event
     async def on_message(message):
         await events.on_message(bot, message)
 
-
     @bot.event
     async def on_command_error(ctx, error):
         await ctx.send(f"Command Error: {error}")
         raise error
-
 
     handler = setup_logging()
 
