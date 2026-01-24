@@ -1,8 +1,11 @@
 from discord.ext import commands
+from google.cloud.firestore_v1.types import StructuredAggregationQuery
+
 from features.stack_repo import StackRepository
 from features.stack_service import StackService
 from features.stack_models import Stack
 import re
+from difflib import SequenceMatcher
 
 repo = StackRepository()
 service = StackService(repo)
@@ -30,8 +33,9 @@ def render_stack(stk: Stack, role=None) -> str:
     for name in stk.slot_names:
         players.append(name if name else "empty")
     players_part = "Players: " + " • ".join(players)
+    footer = f"Commands: `!join {stk.code}`, `!leave {stk.code}`"
 
-    return "\n".join([header, slots_part, players_part])
+    return "\n".join([header, slots_part, players_part, footer])
 
 time12H_re = re.compile(r"^(0?[1-9]|1[0-2])([:.]([0-5][0-9]))?(am|pm)$", re.IGNORECASE)
 time24H_re = re.compile(r"^([01]?[0-9]|2[0-3]):([0-5][0-9])$")
@@ -57,12 +61,29 @@ def game_and_time(ctx, args, hint):
 
     return game, time_text
 
+#for typo matching
+def similarity(a: str, b: str) -> float:
+    return SequenceMatcher(None, a, b).ratio()
+
 def find_matching_role(guild, game_name: str):
     game_normal = game_name.lower().strip()
+
+    best_role = None
+    match_score = 0
+
     for role in guild.roles:
         role_normal = role.name.lower().strip()
         if game_normal in role_normal or role_normal in game_normal:
             return role
+
+        score = similarity(game_normal, role_normal)
+        if score > match_score:
+            match_score = score
+            best_role = role
+
+    if match_score >= 0.65:
+        return best_role
+
     return None
 
 def setup(bot: commands.Bot):
