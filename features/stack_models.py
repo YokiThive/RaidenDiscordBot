@@ -14,6 +14,9 @@ class Stack:
     game: str
     time_text: str
     created_at: int
+    channel_id: int = 0 #channel to ping
+    reminder: int = 0 #unix time
+    reminded: bool = False #prevent duplicates
 
     #store user info
     """
@@ -24,14 +27,14 @@ class Stack:
     slot_names: List[Optional[str]] = field(default_factory=list)
 
     @staticmethod
-    def create_stack(code: str, size: int, game: str, time_text: str, id: int, name: str) -> Stack:
+    def create_stack(code: str, size: int, game: str, time_text: str, id: int, name: str, channel_id: int, reminder: int) -> Stack:
         now = int(time.time())
         slots = [None] * size
         names = [None] * size
         slots[0] = id
         names[0] = name
 
-        return Stack(code=code, size=size, game=game, time_text=time_text, created_at=now, slots=slots, slot_names=names)
+        return Stack(code=code, size=size, game=game, time_text=time_text, created_at=now, channel_id=channel_id, reminder=reminder, reminded=False, slots=slots, slot_names=names)
 
     def is_full(self) -> bool:
         return all(uid is not None for uid in self.slots)
@@ -105,18 +108,6 @@ class Stack:
     def is_main(self, user_id: int) -> bool:
         return self.slots and self.slots[0] == user_id
 
-    def toString(self) -> str:
-        lines = [f"Stack code: {self.code}",
-                 f"Player size: {self.size}",
-                 f"Game: {self.game}",
-                 f"Time: {self.time_text}",
-                 "Players:"
-                 ]
-        for i in range(self.size):
-            name = self.slot_names[i] or "To Be Found"
-            lines.append(f" {self.slot_label(i)}: {name}")
-        return "\n".join(lines)
-
     def to_dict(self) -> Dict[str, Any]:
         return {
             "code": self.code,
@@ -124,6 +115,9 @@ class Stack:
             "game": self.game,
             "time_text": self.time_text,
             "created_at": self.created_at,
+            "channel_id": self.channel_id,
+            "reminder": self.reminder,
+            "reminded": self.reminded,
             "slots": self.slots,
             "slot_names": self.slot_names,
         }
@@ -144,6 +138,9 @@ class Stack:
             game=data.get("game", ""),
             time_text=data.get("time_text", ""),
             created_at=int(data.get("created_at", 0)),
+            channel_id=int(data.get("channel_id", 0)),
+            reminder=int(data.get("reminder", 0)),
+            reminded=bool(data.get("reminded", False)),
             slots=slots[:size],
             slot_names=slot_names[:size],
         )
