@@ -68,8 +68,10 @@ if __name__ == "__main__":
 
     @bot.event
     async def on_command_error(ctx, error):
+        if isinstance(error, commands.CommandNotFound):
+            return
         await ctx.send(f"Command Error: {error}")
-        raise error
+        print(f"Command Error: {error}")
 
     handler = setup_logging()
 

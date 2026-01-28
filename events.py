@@ -10,5 +10,3 @@ async def on_message(bot, message):
 
     if bad_word(message.content):
         await message.channel.send(f"{message.author.mention}, what a bully!")
-
-    await bot.process_commands(message)
