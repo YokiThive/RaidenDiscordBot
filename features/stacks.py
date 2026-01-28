@@ -4,6 +4,7 @@ from google.cloud.firestore_v1.types import StructuredAggregationQuery
 from features.stack_repo import StackRepository
 from features.stack_service import StackService
 from features.stack_models import Stack
+from features.prefix_repo import PrefixRepo
 import re
 from difflib import SequenceMatcher
 
@@ -12,6 +13,7 @@ from zoneinfo import ZoneInfo
 import time as t
 import random
 
+prefix_repo = PrefixRepo()
 repo = StackRepository()
 service = StackService(repo)
 timezone = ZoneInfo("Asia/Kuala_Lumpur")
@@ -34,7 +36,7 @@ def stack_type_label(size: int) -> str:
         return "Five Stack"
     return f"{size} Stack"
 
-def render_stack_create(stk: Stack, role=None) -> str:
+def render_stack_create(stk: Stack, role=None, prefix: str = "!") -> str:
     role_ping = f"<@&{role.id}>" if role else ""
     stack_type = stack_type_label(stk.size)
     display_game_name = role.name if role else stk.game
@@ -46,17 +48,17 @@ def render_stack_create(stk: Stack, role=None) -> str:
 
     players = [(name if name else "empty") for name in stk.slot_names]
     players_part = "Players: " + " • ".join(players)
-    footer = f"Commands: `!join {stk.code}`, `!leave {stk.code}`"
+    footer = f"Commands: `{prefix}join {stk.code}`, `{prefix}leave {stk.code}`"
 
     return "\n".join([header, slots_part, players_part, footer])
 
-def render_stack_status(stk: Stack) -> str:
+def render_stack_status(stk: Stack, prefix: str = "!") -> str:
     filled = sum(1 for uid in stk.slots if uid is not None)
     slots_part = f"Slots: `{filled}/{stk.size}`  Host: {stk.slot_names[0] or 'Unknown'}"
 
     players = [(name if name else "empty") for name in stk.slot_names]
     players_part = "Players: " + " • ".join(players)
-    footer = f"Commands: `!join {stk.code}`, `!leave {stk.code}`"
+    footer = f"Commands: `{prefix}join {stk.code}`, `{prefix}leave {stk.code}`"
 
     return "\n".join([slots_part, players_part, footer])
 
@@ -195,7 +197,7 @@ def setup(bot: commands.Bot):
     @bot.command()
     async def duo(ctx: commands.Context, *args):
         try:
-            game, time_text = game_and_time(ctx, args, hint="!duo <game> <time>")
+            game, time_text = game_and_time(ctx, args, hint=f"{ctx.prefix}duo <game> <time>")
         except ValueError as e:
             await ctx.send(str(e))
             return
@@ -216,12 +218,12 @@ def setup(bot: commands.Bot):
             reminder=reminder,
         )
         repo.set(stk)
-        await ctx.send(render_stack_create(stk, matched_role))
+        await ctx.send(render_stack_create(stk, matched_role, prefix=ctx.prefix))
 
     @bot.command()
     async def trio(ctx: commands.Context, *args):
         try:
-            game, time_text = game_and_time(ctx, args, hint="!trio <game> <time>")
+            game, time_text = game_and_time(ctx, args, hint=f"{ctx.prefix}trio <game> <time>")
         except ValueError as e:
             await ctx.send(str(e))
             return
@@ -242,12 +244,12 @@ def setup(bot: commands.Bot):
             reminder=reminder,
         )
         repo.set(stk)
-        await ctx.send(render_stack_create(stk, matched_role))
+        await ctx.send(render_stack_create(stk, matched_role, prefix=ctx.prefix))
 
     @bot.command()
     async def five_stack(ctx: commands.Context, *args):
         try:
-            game, time_text = game_and_time(ctx, args, hint="!five <game> <time>")
+            game, time_text = game_and_time(ctx, args, hint=f"{ctx.prefix}five_stack <game> <time>")
         except ValueError as e:
             await ctx.send(str(e))
             return
@@ -268,7 +270,7 @@ def setup(bot: commands.Bot):
             reminder=reminder,
         )
         repo.set(stk)
-        await ctx.send(render_stack_create(stk, matched_role))
+        await ctx.send(render_stack_create(stk, matched_role, prefix=ctx.prefix))
 
     @bot.command()
     async def join(ctx: commands.Context, code: str):
@@ -293,7 +295,7 @@ def setup(bot: commands.Bot):
             return
 
         repo.set(stk)
-        await ctx.send(f"Joined successfully\n{render_stack_status(stk)}")
+        await ctx.send(f"Joined successfully\n{render_stack_status(stk, prefix=ctx.prefix)}")
 
     @bot.command()
     async def leave(ctx: commands.Context, code: str):
@@ -309,7 +311,8 @@ def setup(bot: commands.Bot):
             return
 
         if result.action == "left" and result.stack:
-            await ctx.send(f"{result.message}\n{render_stack_status(result.stack)}")
+            await ctx.send(
+                f"{result.message}\n{render_stack_status(result.stack, prefix=ctx.prefix)}")
             return
 
         await ctx.send(result.message)

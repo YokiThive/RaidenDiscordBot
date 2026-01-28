@@ -9,8 +9,17 @@ import os
 from config import DISCORD_TOKEN, setup_logging
 import events
 from features import basic_commands
+from features import admin_commands
 
 from features import stacks
+from features.prefix_repo import PrefixRepo
+
+prefix_repo = PrefixRepo()
+
+async def get_prefix(bot, message):
+    if message.guild is None:
+        return PrefixRepo.DEFAULT
+    return prefix_repo.get(message.guild.id)
 
 def start_server():
     app = Flask(__name__)
@@ -41,11 +50,12 @@ if __name__ == "__main__":
         async def setup_hook(self):
             await self.load_extension("features.voice_intro")
 
-    bot = Bot(command_prefix="!", intents=intents)
+    bot = Bot(command_prefix=get_prefix, intents=intents)
 
     # all my commands
     basic_commands.setup(bot)
     stacks.setup(bot)
+    admin_commands.setup(bot)
 
     @bot.event
     async def on_ready():
@@ -54,6 +64,7 @@ if __name__ == "__main__":
     @bot.event
     async def on_message(message):
         await events.on_message(bot, message)
+        await bot.process_commands(message)
 
     @bot.event
     async def on_command_error(ctx, error):
