@@ -48,7 +48,7 @@ def render_stack_create(stk: Stack, role=None, prefix: str = "!") -> str:
 
     players = [(name if name else "empty") for name in stk.slot_names]
     players_part = "Players: " + " • ".join(players)
-    footer = f"Commands: `{prefix}join {stk.code}`, `{prefix}leave {stk.code}`"
+    footer = f"Commands: `{prefix}stack_join {stk.code}`, `{prefix}stack_leave {stk.code}`"
 
     return "\n".join([header, slots_part, players_part, footer])
 
@@ -58,7 +58,7 @@ def render_stack_status(stk: Stack, prefix: str = "!") -> str:
 
     players = [(name if name else "empty") for name in stk.slot_names]
     players_part = "Players: " + " • ".join(players)
-    footer = f"Commands: `{prefix}join {stk.code}`, `{prefix}leave {stk.code}`"
+    footer = f"Commands: `{prefix}stack_join {stk.code}`, `{prefix}stack_leave {stk.code}`"
 
     return "\n".join([slots_part, players_part, footer])
 
@@ -273,7 +273,7 @@ def setup(bot: commands.Bot):
         await ctx.send(render_stack_create(stk, matched_role, prefix=ctx.prefix))
 
     @bot.command()
-    async def join(ctx: commands.Context, code: str):
+    async def stack_join(ctx: commands.Context, code: str):
         code = code.strip()
         stk = repo.get(code)
 
@@ -298,7 +298,7 @@ def setup(bot: commands.Bot):
         await ctx.send(f"Joined successfully\n{render_stack_status(stk, prefix=ctx.prefix)}")
 
     @bot.command()
-    async def leave(ctx: commands.Context, code: str):
+    async def stack_leave(ctx: commands.Context, code: str):
         result = service.leave_stack(code, ctx.author.id)
 
         if not result.ok:
