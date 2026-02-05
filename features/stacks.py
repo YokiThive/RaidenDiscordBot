@@ -198,7 +198,9 @@ def setup(bot: commands.Bot):
     async def duo(ctx: commands.Context, *args):
         try:
             game, time_text = game_and_time(ctx, args, hint=f"{ctx.prefix}duo <game> <time>")
+            print(f"[DEBUG] Parsed successfully: game={game}, time={time_text}")
         except ValueError as e:
+            print(f"[DEBUG] ValueError: {e}")
             await ctx.send(str(e))
             return
 
@@ -218,7 +220,10 @@ def setup(bot: commands.Bot):
             reminder=reminder,
         )
         repo.set(stk)
+        print(f"[DEBUG] Stack saved to Firebase")
+        print(f"[DEBUG] About to send message...")
         await ctx.send(render_stack_create(stk, matched_role, prefix=ctx.prefix))
+        print(f"[DEBUG] Message sent successfully!")
 
     @bot.command()
     async def trio(ctx: commands.Context, *args):
