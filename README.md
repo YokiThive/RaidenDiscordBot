@@ -33,6 +33,6 @@ RaidenDiscordBot is a Discord bot built with Python. It includes voice intro pla
 
 ## Installation
 ```bash
-git clone https://github.com/<your-username>/RaidenDiscordBot.git
+git clone https://github.com/YokiThive/RaidenDiscordBot.git
 cd RaidenDiscordBot
 python -m venv .venv
