@@ -27,6 +27,8 @@ sad_messages = ["Not enough players, stack expired",
                 "Nobody showed up, deleting the stack",
                 "Nobody wants to play with you, give up"]
 
+stack_code_re = re.compile(r"^[A-Za-z0-9]+$")
+
 def stack_type_label(size: int) -> str:
     if size == 2:
         return "Duo Stack"
@@ -108,7 +110,7 @@ def valid_time(time_text: str) -> bool:
 
     return False
 
-def game_and_time(ctx, args, hint):
+def game_and_time(args, hint):
     if len(args) < 2:
         raise ValueError(f"Usage: `{hint}`")
 
@@ -169,19 +171,21 @@ def setup(bot: commands.Bot):
                 try:
                     channel = await bot.fetch_channel(channel_id)
                 except Exception:
-                    repo.delete(code)
                     continue
 
-            try:
-                if stk.is_full():
-                    mentions = " ".join(f"<@{uid}>" for uid in stk.member_ids())
-                    await channel.send(f"{mentions}\n {random.choice(success_messages)} (**{stk.game}** | **{stk.time_text}**)")
-                else:
-                    filled = sum(1 for uid in stk.slots if uid is not None)
-                    await channel.send(f"{random.choice(sad_messages)}\n"
-                                       f"(**{stk.game}** | **{stk.time_text}** | Slots: `{filled}/{stk.size}`)")
-            finally:
-                repo.delete(code)
+            if stk.is_full():
+                mentions = " ".join(f"<@{uid}>" for uid in stk.member_ids())
+                await channel.send(
+                    f"{mentions}\n {random.choice(success_messages)} (**{stk.game}** | **{stk.time_text}**)"
+                )
+            else:
+                filled = sum(1 for uid in stk.slots if uid is not None)
+                await channel.send(
+                    f"{random.choice(sad_messages)}\n"
+                    f"(**{stk.game}** | **{stk.time_text}** | Slots: `{filled}/{stk.size}`)"
+                )
+
+            repo.delete(code)
 
     @reminder_loop.before_loop
     async def before_loop():
@@ -197,7 +201,7 @@ def setup(bot: commands.Bot):
     @bot.command()
     async def duo(ctx: commands.Context, *args):
         try:
-            game, time_text = game_and_time(ctx, args, hint=f"{ctx.prefix}duo <game> <time>")
+            game, time_text = game_and_time(args, hint=f"{ctx.prefix}duo <game> <time>")
             print(f"[DEBUG] Parsed successfully: game={game}, time={time_text}")
         except ValueError as e:
             print(f"[DEBUG] ValueError: {e}")
@@ -228,7 +232,7 @@ def setup(bot: commands.Bot):
     @bot.command()
     async def trio(ctx: commands.Context, *args):
         try:
-            game, time_text = game_and_time(ctx, args, hint=f"{ctx.prefix}trio <game> <time>")
+            game, time_text = game_and_time(args, hint=f"{ctx.prefix}trio <game> <time>")
         except ValueError as e:
             await ctx.send(str(e))
             return
@@ -254,7 +258,7 @@ def setup(bot: commands.Bot):
     @bot.command()
     async def five_stack(ctx: commands.Context, *args):
         try:
-            game, time_text = game_and_time(ctx, args, hint=f"{ctx.prefix}five_stack <game> <time>")
+            game, time_text = game_and_time(args, hint=f"{ctx.prefix}five_stack <game> <time>")
         except ValueError as e:
             await ctx.send(str(e))
             return
@@ -280,6 +284,11 @@ def setup(bot: commands.Bot):
     @bot.command()
     async def stack_join(ctx: commands.Context, code: str):
         code = code.strip()
+
+        if not stack_code_re.fullmatch(code):
+            await ctx.send("Invalid code")
+            return
+
         stk = repo.get(code)
 
         if not stk:
@@ -331,7 +340,7 @@ def setup(bot: commands.Bot):
 
         lines = []
         for code, stk in stacks.items():
-            host = stk.slot_names[0] or "Unknonw"
+            host = stk.slot_names[0] or "Unknown"
             lines.append(f"`{code}` {stk.size}-stack {stk.game} Host: {host}")
 
         await ctx.send("Active stacks\n" + "\n".join(lines))

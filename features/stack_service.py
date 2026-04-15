@@ -28,6 +28,8 @@ class StackService:
 
     def leave_stack(self, code: str, user_id: int) -> Leave:
         code = code.strip()
+        if not code.isalnum():
+            return Leave(False, "Invalid stack code", "none")
         stk = self.repo.get(code)
 
         if not stk:
@@ -37,9 +39,15 @@ class StackService:
             return Leave(False, "You are not in this stack", "none", stack=stk)
 
         if stk.is_main(user_id):
-            ids = stk.member_ids()
+            ids = [member_id for member_id in stk.member_ids() if member_id != user_id]
             self.repo.delete(code)
-            return Leave(ok=True, message=f"Main host left - stack `{code}` deleted", action="deleted", stack=stk, ping_ids=ids)
+            return Leave(
+                ok=True,
+                message=f"Main host left - stack `{code}` deleted",
+                action="deleted",
+                stack=stk,
+                ping_ids=ids,
+            )
 
         removed = stk.remove_user(user_id, compact=True)
         if not removed:

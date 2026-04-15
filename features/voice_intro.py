@@ -50,6 +50,9 @@ class VoiceIntro(commands.Cog):
         if member.id != USER_ID:
             return
 
+        if member.bot:
+            return
+
         #triggers when join channel
         if after.channel is None:
             return
@@ -78,7 +81,8 @@ class VoiceIntro(commands.Cog):
                 if current is None or current.id != channel.id:
                     return
 
-                if member.guild.voice_client and member.guild.voice_client.is_connected():
+                existing_vc = member.guild.voice_client
+                if existing_vc and existing_vc.is_connected():
                     return
 
                 if not os.path.exists(INTRO_PATH):
@@ -87,8 +91,17 @@ class VoiceIntro(commands.Cog):
 
                 print(f"[VoiceIntro] Attempting to join channel: {channel.name}")
 
-                vc = await channel.connect()
+                try:
+                    vc = await channel.connect(reconnect=False)
+                except Exception as e:
+                    print(f"[VoiceIntro] Failed to connect to '{channel.name}' ({channel.id}): {type(e).__name__}: {e}")
+                    return
+
                 await asyncio.sleep(0.5)
+
+                if not vc.is_connected():
+                    print("[VoiceIntro] Voice client disconnected before playback started")
+                    return
 
                 ffmpeg_exe = imageio_ffmpeg.get_ffmpeg_exe()
                 source = discord.FFmpegPCMAudio(INTRO_PATH, executable=ffmpeg_exe)
@@ -98,7 +111,11 @@ class VoiceIntro(commands.Cog):
                     print(f"Playback finished err={err}")
                     finished.set()
 
-                vc.play(source, after=after_play)
+                try:
+                    vc.play(source, after=after_play)
+                except Exception as e:
+                    print(f"[VoiceIntro] Failed to start playback: {type(e).__name__}: {e}")
+                    return
 
                 try:
                     await asyncio.wait_for(finished.wait(), timeout=10.0)

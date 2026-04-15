@@ -25,6 +25,8 @@ class StackRepository:
         for code, raw in data.items():
             try:
                 stacks[code] = Stack.from_dict(raw)
-            except Exception:
+            except Exception as e:
+                print(f"Failed to load stack '{code}': {e}")
                 continue
+
         return stacks
